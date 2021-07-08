@@ -17,30 +17,38 @@ def initialise_scheduled_jobs(app):
 
 def process_orders(app):
     with app.app_context():
-        orders = get_queue_of_orders_to_process()
-        if len(orders) == 0:
-            return
+        try:
+            orders = get_queue_of_orders_to_process()
+            
+            if len(orders) == 0:
+                return
 
-        order = orders[0]
+            order = orders[0]
 
-        payload = {
-            "product": order.product,
-            "customer": order.customer,
-            "date": order.date_placed_local.isoformat(),
-        }
-        app.logger.info("Payload for API: " + payload["product"])
-        app.logger.info("Payload for API: " + payload["customer"])
-        app.logger.info("Payload for API: " + payload["date"])
-        response = requests.post(
-            app.config["FINANCE_PACKAGE_URL"] + "/ProcessPayment",
-            json=payload
-        )
-        app.logger.info("Response from endpoint: " + response.text)
+            payload = {
+                "product": order.product,
+                "customer": order.customer,
+                "date": order.date_placed_local.isoformat(),
+            }
+            app.logger.info("Payload for API: " + payload["product"])
+            app.logger.info("Payload for API: " + payload["customer"])
+            app.logger.info("Payload for API: " + payload["date"])
+            response = requests.post(
+                app.config["FINANCE_PACKAGE_URL"] + "/ProcessPayment",
+                json=payload
+            )
+            app.logger.info("Response from endpoint: " + response.text)
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        order.set_as_processed()
-        save_order(order)
+            order.set_as_processed()
+            save_order(order)
+        except Exception:
+            app.logger.exception("Error processing order {id}".format(id = order.id))
+            order.set_as_cancelled()
+            app.logger.info("Cancelled the order: {id} ".format(id = order.id))
+            save_order(order)
+        
 
 def get_queue_of_orders_to_process():
     allOrders = get_all_orders()
