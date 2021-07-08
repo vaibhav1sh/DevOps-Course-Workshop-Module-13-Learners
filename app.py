@@ -8,7 +8,12 @@ from scheduled_jobs import initialise_scheduled_jobs
 from products import create_product_download
 import requests
 import logging
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+logger.addHandler(AzureLogHandler())
+logger.warning('Hello, World!')
 
 app = Flask(__name__)
 app.config.from_object(Config)

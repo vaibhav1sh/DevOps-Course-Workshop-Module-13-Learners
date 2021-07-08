@@ -2,8 +2,8 @@ from data.database import save_order, get_all_orders
 from products import create_product_download
 from apscheduler.schedulers.background import BackgroundScheduler
 import requests
-
-
+from datetime import datetime
+from datetime import datetime, time
 def initialise_scheduled_jobs(app):
     scheduler = BackgroundScheduler()
     scheduler.add_job(
@@ -26,9 +26,11 @@ def process_orders(app):
         payload = {
             "product": order.product,
             "customer": order.customer,
-            "date": order.date_placed.isoformat(),
+            "date": order.date_placed_local.isoformat(),
         }
-
+        app.logger.info("Payload for API: " + payload["product"])
+        app.logger.info("Payload for API: " + payload["customer"])
+        app.logger.info("Payload for API: " + payload["date"])
         response = requests.post(
             app.config["FINANCE_PACKAGE_URL"] + "/ProcessPayment",
             json=payload
@@ -42,6 +44,8 @@ def process_orders(app):
 
 def get_queue_of_orders_to_process():
     allOrders = get_all_orders()
-    queuedOrders = filter(lambda order: order.date_processed == None, allOrders)
+    # queuedOrders = filter(lambda order: order.date_processed == None, allOrders)
+    queuedOrders = filter(
+        lambda order: order.date_processed == None, allOrders)
     sortedQueue = sorted(queuedOrders, key= lambda order: order.date_placed)
     return list(sortedQueue)
